@@ -8,64 +8,45 @@ Maintainer  :  <lingpo.huang@plowtech.net>
 Stability   :  unstable
 Portability :  portable 
 
-<module description starting at first column>
+<Reads configs and pass it to the key matching functions>
 -}
-{-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
+
+{-# LANGUAGE OverloadedStrings #-}
+
+--General
 import           Control.Applicative
+-- Types
 import qualified Data.Aeson               as A
-import qualified Data.ByteString          as BS
-import qualified Data.ByteString.Lazy     as BSL
-import           Data.Maybe
-import qualified Data.Text                as T
-import qualified Data.Traversable         as T
-import           Data.Yaml
+import qualified Data.ByteString.Lazy.Char8     as BSL
+import qualified Data.Traversable               as T
+import Data.Yaml (encodeFile)
+-- Database
 import           Database.Persist
-import           Database.Persist.Types
-import           DirectedKeys.GenerateCfg
-import           GHC.Generics
 import           Persist.Mongo.Settings
-import           Prelude
+-- Internal
+import           Active.Alarm.Grabber
+import           Active.Alarm.Grabber.Types 
 
--- main :: IO ()
--- main = do
---   dbConf <- readDBConf "config.yml"
---   genConf <- readKeyGen "config.yml"
---   let hosts = (hostList genConf)
---   eBoundList <- T.sequence $ (\conf -> createAndMatchKeys conf getAlarmId hosts) <$> dbConf
---   case eBoundList of
---     Left _ -> putStrLn "Error reading config file"
---     Right boundList -> BSL.putStrLn . A.encode $ listToOutput boundList
+main :: IO ()
+main = do
+  dbConf <- readDBConf "config.yml"
+  genConf <- readKeyGen "config.yml"
+  let hosts = (hostList genConf)
+  eskrList <- T.sequence $ (\conf -> createAndMatchKeys conf buildQuery getAlarmId hosts) <$> dbConf
+  case eskrList of
+    Left _ -> putStrLn "Error reading config file"
+    Right skrList -> do 
+                  encodeFile "singleKeyRouter.yml" (listToOutput skrList)
+                  esrcf <- readSingleKeyRouterConfig "singleKeyRouter.yml"
+                  case esrcf of
+                    Left e -> fail e
+                    Right srcf -> do
+                              mapM_ (BSL.putStrLn . A.encode) srcf
+                              putStrLn "Successfully Write to YAML File."
 
--- getAlarmId :: Entity Alarm -> Key Alarm
--- getAlarmId = entityKey
+getAlarmId :: Entity Alarm -> Key Alarm
+getAlarmId = entityKey
 
--- getOnpingTagPid :: Entity OnpingTagHistory -> Maybe Int
--- getOnpingTagPid = onpingTagHistoryPid . entityVal
+buildQuery :: [Filter Alarm]
+buildQuery = [AlarmAlarmActive ==. True]
 
-
--- readKeyGen :: FilePath -> IO KeyGenConfig
--- readKeyGen fp = do
---   contents <- BS.readFile fp
---   case (decodeEither contents) of
---     Left _ -> fail "Unable to parse KeyGenConfig"
---     Right kgcfg -> return kgcfg
-
-
--- listToOutput :: [(a,b)] -> [KeyGenOutput b a]
--- listToOutput sList = map (\(host, bound) -> KeyGenOutput bound host ) sList
-
--- data KeyGenConfig = KeyGenConfig {
---   hostList :: [String]
--- } deriving (Eq, Show, Generic)
-
--- instance FromJSON KeyGenConfig where
-
--- data KeyGenOutput a b = KeyGenOutput {
---   keyGenHost  :: a
--- , keyGenBound :: b
--- } deriving (Eq, Show)
-
-
--- instance (ToJSON a, ToJSON b) => ToJSON (KeyGenOutput a b) where
---   toJSON (KeyGenOutput {..}) = object ["host" .= keyGenHost
---                                       ,"upperBound" .= keyGenBound]

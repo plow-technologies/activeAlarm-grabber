@@ -1,5 +1,0 @@
-host: "localhost" 
-db: "onping_production"
-port: 27017
-
-hostList: ["test1","test2"]
