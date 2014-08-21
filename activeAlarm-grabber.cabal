@@ -52,6 +52,15 @@ Test-Suite spec
   Main-Is:              Spec.hs
   Build-Depends:        base
                       , hspec
+                      , aeson
+                      , directed-keys
+                      , persist-mongo-template 
+                      , persistent
+                      , persistent-mongoDB
+                      , transformers
+                      , monad-control
+                      , yaml
+                      , bytestring
 
 Source-Repository head
   Type:                 git
