@@ -26,6 +26,7 @@ Library
                       , persistent-mongoDB == 1.3.1.1
                       , yaml == 0.8.8.2
                       , bytestring == 0.10.4.0
+                      , text
 
 Executable activealarmgrabber
    main-is:            Main.hs
@@ -42,6 +43,7 @@ Executable activealarmgrabber
                       , monad-control
                       , yaml
                       , bytestring
+                      , text
    
 Test-Suite spec
   Type:                 exitcode-stdio-1.0
